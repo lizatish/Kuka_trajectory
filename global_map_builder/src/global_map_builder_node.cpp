@@ -64,11 +64,8 @@ int main(int argc, char **argv){
 
     connectLocalAndGlobalMaps();
 
-    formObstacleList();
-
-    cout << obstacleListMessage.points.size() << endl;
-
-    obstacle_list_pub.publish(obstacleListMessage);
+    //formObstacleList();
+    //obstacle_list_pub.publish(obstacleListMessage);
 
     // Формирование сообщения с картой
     formGlobalMapMessage();

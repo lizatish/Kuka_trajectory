@@ -46,7 +46,7 @@ int main(int argc, char **argv){
   ros::NodeHandle m;
   ros::Subscriber odom_sub = m.subscribe("/odom", 8, odometryCallback);
   ros::Subscriber target_point_sub = m.subscribe("/target_point", 8, targetPointCallBack);
-  ros::Subscriber target_path_sub = m.subscribe("/path_rrt", 8, targetPathCallback);
+  ros::Subscriber target_path_sub = m.subscribe("/target_path", 8, targetPathCallback);
 
   kuka_movebase_publisher = m.advertise<geometry_msgs::Twist> ("kuk_keyboard_control/pose_commands", 32);
 
@@ -64,15 +64,18 @@ int main(int argc, char **argv){
   }
 }
 void targetPathCallback(const nav_msgs::Path &data){
-  for(int i = 0; i < data.poses.size(); i++){
-    geometry_msgs::PoseStamped point = data.poses.at(i);
-    geometry_msgs::Point p;
-    p.x = point.pose.position.x;
-    p.y = point.pose.position.y;
-    targetPath.push_back(p);
+  if(data.poses.size() && !isCameTargetPath){
+    for(int i = 0; i < data.poses.size(); i++){
+      geometry_msgs::PoseStamped point = data.poses.at(i);
+      geometry_msgs::Point p;
+      p.x = point.pose.position.x;
+      p.y = point.pose.position.y;
+      p.z = point.pose.position.z;
+      targetPath.push_back(p);
+    }
+    isCameTargetPath = true;
+    cout << targetPath.size() << endl;
   }
-  isCameTargetPath = true;
-  cout << targetPath.size() << endl;
 }
 void targetPointCallBack(const geometry_msgs::Point &data){
   targetPoint = data;
@@ -86,7 +89,7 @@ void odometryCallback(const nav_msgs::Odometry &data){
   yawAngle = tf::getYaw(pose.getRotation());
 
   // Координата смещения лазера относительно центра платформы
-  float laserOffsetX = 0.19;
+  float laserOffsetX = 0;
   float laserOffsetY = 0;
 
   // Составляющая поворота
@@ -106,15 +109,16 @@ void goToNewCoordinates(){
   cout << "Tar path size " << targetPath.size() << endl;
 
   float distToTarget = sqrt(pow((currentPosition.y) - targetPath[0].y, 2)
-                            + pow((currentPosition.x) - targetPath[0].x, 2));
+      + pow((currentPosition.x) - targetPath[0].x, 2));
+
   cout << "x " << currentPosition.x << " y " << currentPosition.y  << " dist " << distToTarget << endl;
   cout << "Target x: " << targetPath[0].x << " y: " << targetPath[0].y << endl;
 
-   if(distToTarget > 0.1){
+  if(distToTarget > 0.1){
     distToTarget = sqrt(pow((currentPosition.y) - targetPath[0].y, 2)
-                        + pow((currentPosition.x) - targetPath[0].x, 2));
-    float targetAngle = atan2(targetPath[0].y - currentPosition.y, targetPath[0].x - currentPosition.x);
-
+        + pow((currentPosition.x) - targetPath[0].x, 2));
+    //    float targetAngle = atan2(targetPath[0].y - currentPosition.y, targetPath[0].x - currentPosition.x);
+    float targetAngle = targetPath[0].z;
     float angleDiff = yawAngle - targetAngle;
     if(angleDiff > M_PI)
       angleDiff -= 2 * M_PI;
@@ -124,23 +128,30 @@ void goToNewCoordinates(){
 
 
     // П-регулятор для рулевой скорости
-    float PKoeff = 3;
-    data.linear.x = 1;
-    if(abs(angleDiff) > 0.2){
-      if(angleDiff > 0.2)
-        data.angular.z = -1;
+    //    float PKoeff = 3;
+    data.linear.x = 0.2;
+    if(abs(angleDiff) > 0.01){
+      if(angleDiff > 0.01)
+        data.angular.z = -0.2;
       else
-        data.angular.z = 1;
+        data.angular.z = 0.2;
     }
     else{
-      data.angular.z = -angleDiff * PKoeff;
-      data.linear.x = -angleDiff * PKoeff;
+      data.angular.z = 0;
+      data.linear.x = 1.5;
     }
     // Задание постоянной ходовой скорости
-//    publishCommandVelocities(data);
+    publishCommandVelocities(data);
   }
   else{
-    targetPath.erase(targetPath.begin());
+    if(targetPath.size()){
+      targetPath.erase(targetPath.begin());
+    }
+    else{
+      data.angular.z = 0;
+      data.linear.x = 0;
+      publishCommandVelocities(data);
+    }
   }
   isCameTarget = false;
   isCameOdom = false;

@@ -41,6 +41,7 @@ int main(int argc, char **argv){
   // Создание публикатора пути
   ros::NodeHandle l;
   ros::Publisher path_pub = l.advertise<nav_msgs::Path>("/path_rrt", 8);
+  ros::Publisher target_path_pub = l.advertise<nav_msgs::Path>("/target_path", 8);
   ros::Publisher target_point_pab = l.advertise<geometry_msgs::Point> ("/target_point", 8);
   ros::Subscriber global_map_sub = l.subscribe("/global_map", 8, globalMapCallback);
   ros::Subscriber odom_sub = l.subscribe("/odom", 8, odometryCallback);
@@ -48,8 +49,8 @@ int main(int argc, char **argv){
   pathMessageInitParams();
 
   geometry_msgs::Point goal;
-  goal.x = 7;
-  goal.y = 7;
+  goal.x = 4;
+  goal.y = 4;
   goal.z = 0;
 
   bool first = true;
@@ -65,13 +66,26 @@ int main(int argc, char **argv){
       cout << "Time of cicle " << (ros::Time::now().toSec() - start_time.toSec())
            <<  endl;
       delete rrt;
+
+      geometry_msgs::PoseStamped point;
+      nav_msgs::Path target_path;
+      for (int k = path.size() - 1; k >= 0; k--){
+
+        float nx = path[k].x;
+        float ny = path[k].y;
+        point.pose.position.x = nx - mapSize/2*mapResolution;
+        point.pose.position.y = ny - mapSize/2*mapResolution;
+        point.pose.position.z = path[k].z;
+        target_path.poses.push_back(point);
+      }
+      target_path_pub.publish(target_path);
+
       formPathMessage();
       cout << "Path size " << pathMessage.poses.size() << endl;
 
       if(path.size() >= 6){
         target_point_pab.publish(pointToSend);
       }
-      path_pub.publish(pathMessage);
 
       path.clear();
       isCameOdom = false;
@@ -79,7 +93,8 @@ int main(int argc, char **argv){
       first = false;
     }
 
-    pathMessage.poses.clear();
+    path_pub.publish(pathMessage);
+    //    pathMessage.poses.clear();
     ros::spinOnce();
     rate.sleep();
   }
@@ -102,7 +117,8 @@ void odometryCallback(const nav_msgs::Odometry data){
   // Окончательные начальные координаты
   currentPosition.x = data.pose.pose.position.x + laserRotationX;
   currentPosition.y = data.pose.pose.position.y + laserRotationY;
-  cout << currentPosition.x << " " << currentPosition.y << " " << yawAngle << endl;
+  currentPosition.z = yawAngle;
+  //  cout << currentPosition.x << " " << currentPosition.y << " " << yawAngle << endl;
   isCameOdom = true;
 }
 
@@ -128,10 +144,10 @@ void formPathMessage(){
       pointToSend.y = point.pose.position.y;
       pointToSend.z = path[k].z;
 
-      cout << "Target " << pointToSend.x << " " << pointToSend.y << endl;
+      //      cout << "Target " << pointToSend.x << " " << pointToSend.y << endl;
     }
 
-    cout << point.pose.position.x << " " << point.pose.position.y << " " << path[k].z<< endl;
+    //    cout << point.pose.position.x << " " << point.pose.position.y << " " << path[k].z<< endl;
     pathMessage.poses.push_back(point);
   }
 }
