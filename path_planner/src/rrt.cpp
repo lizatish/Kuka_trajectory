@@ -177,7 +177,6 @@ vector<geometry_msgs::Point> RRT::gen_final_course(int goalInd){
   vector<geometry_msgs::Point> path;
 
   if(goalInd < -1){
-    cout << "Path is not found" << endl;
     return path;
   }
 
@@ -199,7 +198,6 @@ vector<geometry_msgs::Point> RRT::gen_final_course(int goalInd){
     }
     goalInd = node->parent;
   }
-  cout << "Path is found" << endl;
   return path;
 }
 

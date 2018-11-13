@@ -76,7 +76,7 @@ public:
   // Начать планирование
   vector<geometry_msgs::Point> Planning(geometry_msgs::Point s, geometry_msgs::Point g,
                                         const nav_msgs::OccupancyGrid& gMap, float curv,
-                                        float robot_width_half,int maxIter0 = 120);
+                                        float robot_width_half,int maxIter0 = 200);
 };
 
 #endif // RRT_H

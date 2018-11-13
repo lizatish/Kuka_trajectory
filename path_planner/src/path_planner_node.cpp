@@ -30,10 +30,11 @@ geometry_msgs::Point currentPosition;
 float yawAngle;
 
 nav_msgs::OccupancyGrid globalMap;
-bool isGlobalMapCame = false;
+bool isCameGlobalMap = false;
 bool isCameOdom = false;
 
 geometry_msgs::Point pointToSend;
+nav_msgs::Path target_path;
 
 int main(int argc, char **argv){
   ros::init(argc, argv, "kuka_path_searcher_node");
@@ -49,52 +50,89 @@ int main(int argc, char **argv){
   pathMessageInitParams();
 
   geometry_msgs::Point goal;
-  goal.x = 4;
-  goal.y = 4;
+  goal.x = 5;
+  goal.y = 5;
   goal.z = 0;
 
-  bool first = true;
   ros::Rate rate(100);
   bool isAllowProcess = true;
   while(ros::ok() && isAllowProcess){
 
-    if(isCameOdom && isGlobalMapCame && first){
-      // Запуск планировщика
-      RRT* rrt = new RRT();
-      ros::Time start_time = ros::Time::now();
-      path = rrt->Planning(currentPosition, goal, globalMap, CURVATURE, ROBOT_WIDTH_HALF);
-      cout << "Time of cicle " << (ros::Time::now().toSec() - start_time.toSec())
-           <<  endl;
-      delete rrt;
+    if(!path.size()){
+      if(isCameOdom && isCameGlobalMap){
+        isCameOdom = false;
+        isCameGlobalMap = false;
 
-      geometry_msgs::PoseStamped point;
-      nav_msgs::Path target_path;
-      for (int k = path.size() - 1; k >= 0; k--){
+        cout << "Search path" << endl;
 
-        float nx = path[k].x;
-        float ny = path[k].y;
-        point.pose.position.x = nx - mapSize/2*mapResolution;
-        point.pose.position.y = ny - mapSize/2*mapResolution;
-        point.pose.position.z = path[k].z;
-        target_path.poses.push_back(point);
+        // Запуск планировщика
+        RRT* rrt = new RRT();
+        //        ros::Time start_time = ros::Time::now();
+        path = rrt->Planning(currentPosition, goal, globalMap, CURVATURE, ROBOT_WIDTH_HALF);
+        //        cout << "Time of cicle " << (ros::Time::now().toSec() - start_time.toSec()) <<  endl;
+        delete rrt;
+
+        if(path.size()){
+          cout << "Path is found " << pathMessage.poses.size() << endl;
+          geometry_msgs::PoseStamped point;
+          for (int k = path.size() - 1; k >= 0; k--){
+            float nx = path[k].x;
+            float ny = path[k].y;
+            point.pose.position.x = nx - mapSize/2*mapResolution;
+            point.pose.position.y = ny - mapSize/2*mapResolution;
+            point.pose.position.z = path[k].z;
+            target_path.poses.push_back(point);
+          }
+          target_path_pub.publish(target_path);
+
+          formPathMessage();
+        }
       }
-      target_path_pub.publish(target_path);
-
-      formPathMessage();
-      cout << "Path size " << pathMessage.poses.size() << endl;
-
-      if(path.size() >= 6){
-        target_point_pab.publish(pointToSend);
-      }
-
-      path.clear();
-      isCameOdom = false;
-      isGlobalMapCame = false;
-      first = false;
     }
+    else{
+      vector<geometry_msgs::Point> path_for_check;
+      RRT* rrt_check = new RRT();
+      path_for_check = rrt_check->Planning(currentPosition, goal, globalMap, CURVATURE, ROBOT_WIDTH_HALF);
+      delete rrt_check;
 
+      if(path_for_check.size() && (path_for_check.size() < path.size())){
+        cout << "Find shorter path" << endl;
+
+        pathMessage.poses.clear();
+        path.clear();
+        target_path.poses.clear();
+
+        path = path_for_check;
+        geometry_msgs::PoseStamped point;
+        for (int k = path.size() - 1; k >= 0; k--){
+          float nx = path[k].x;
+          float ny = path[k].y;
+          point.pose.position.x = nx - mapSize/2*mapResolution;
+          point.pose.position.y = ny - mapSize/2*mapResolution;
+          point.pose.position.z = path[k].z;
+          target_path.poses.push_back(point);
+        }
+        target_path_pub.publish(target_path);
+
+        formPathMessage();
+        cout << "Path size " << pathMessage.poses.size() << endl;
+      }
+      else{
+        // Проверка на пересечение с новой картой
+        for (int k = path.size() - 1; k >= 0; k--){
+          int nx = path[k].x/mapResolution;
+          int ny = path[k].y/mapResolution;
+          if(globalMap.data[mapSize * ny + nx] > 75){
+            pathMessage.poses.clear();
+            path.clear();
+            target_path.poses.clear();
+            cout << "Path will change" << endl;
+          }
+        }
+      }
+      path_for_check.clear();
+    }
     path_pub.publish(pathMessage);
-    //    pathMessage.poses.clear();
     ros::spinOnce();
     rate.sleep();
   }
@@ -126,7 +164,7 @@ void globalMapCallback(const nav_msgs::OccupancyGrid& data){
   mapResolution = data.info.resolution;
   mapSize = data.info.height;
   globalMap = data;
-  isGlobalMapCame = true;
+  isCameGlobalMap = true;
 }
 
 void formPathMessage(){

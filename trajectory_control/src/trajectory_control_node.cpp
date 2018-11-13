@@ -114,7 +114,7 @@ void goToNewCoordinates(){
   cout << "x " << currentPosition.x << " y " << currentPosition.y  << " dist " << distToTarget << endl;
   cout << "Target x: " << targetPath[0].x << " y: " << targetPath[0].y << endl;
 
-  if(distToTarget > 0.1){
+  if(distToTarget > 0.2){
     distToTarget = sqrt(pow((currentPosition.y) - targetPath[0].y, 2)
         + pow((currentPosition.x) - targetPath[0].x, 2));
     //    float targetAngle = atan2(targetPath[0].y - currentPosition.y, targetPath[0].x - currentPosition.x);
@@ -129,16 +129,16 @@ void goToNewCoordinates(){
 
     // П-регулятор для рулевой скорости
     //    float PKoeff = 3;
-    data.linear.x = 0.2;
+    data.linear.x = 1;
     if(abs(angleDiff) > 0.01){
       if(angleDiff > 0.01)
-        data.angular.z = -0.2;
+        data.angular.z = -1;
       else
-        data.angular.z = 0.2;
+        data.angular.z = 1;
     }
     else{
       data.angular.z = 0;
-      data.linear.x = 1.5;
+      data.linear.x = 1;
     }
     // Задание постоянной ходовой скорости
     publishCommandVelocities(data);

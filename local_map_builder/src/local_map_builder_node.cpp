@@ -27,7 +27,7 @@ nav_msgs::OccupancyGrid localMapMessage;
 // Текущий скан
 sensor_msgs::LaserScan current_scan;
 // Ширина Куки
-const float KUKA_WIDTH = 0.5;
+const float ROBOT_WIDTH_HALF = 0.45/2;
 // Пришел ли скан
 bool isActualScanData = false;
 
@@ -109,8 +109,8 @@ void setMap(vector<float> theta, vector<float> r){
       if(x2 >= 0 && x2 < mapSize && y2 >= 0 && y2 < mapSize) {
         for(float dist = 0; dist < r[m]; dist += mapResolution) {
 
-          float x3 = dist * cos(theta[m])/mapResolution - KUKA_WIDTH/2 + mapSize/2;
-          float y3 = dist * sin(theta[m])/mapResolution - KUKA_WIDTH/2 + mapSize/2;
+          float x3 = dist * cos(theta[m])/mapResolution - ROBOT_WIDTH_HALF + mapSize/2;
+          float y3 = dist * sin(theta[m])/mapResolution - ROBOT_WIDTH_HALF + mapSize/2;
 
           localMap[mapSize * (int)y3 + (int)x3] = 25;
         }
@@ -125,8 +125,8 @@ void setMap(vector<float> theta, vector<float> r){
       if(x2 >= 0 && x2 < mapSize && y2 >= 0 && y2 < mapSize) {
         for(float dist = 0; dist < r[m]; dist += mapResolution) {
 
-          int x3 = dist * cos(theta[m])/mapResolution - KUKA_WIDTH/2 + mapSize/2;
-          int y3 = dist * sin(theta[m])/mapResolution - KUKA_WIDTH/2 + mapSize/2;
+          int x3 = dist * cos(theta[m])/mapResolution - ROBOT_WIDTH_HALF + mapSize/2;
+          int y3 = dist * sin(theta[m])/mapResolution - ROBOT_WIDTH_HALF + mapSize/2;
 
           localMap[mapSize * y3 + x3] = 0;
         }
