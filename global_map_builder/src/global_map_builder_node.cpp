@@ -25,7 +25,7 @@ vector<int> globalMap;
 
 nav_msgs::OccupancyGrid globalMapMessage;
 // Ширина Куки
-const float ROBOT_WIDTH_HALF = 0.45/2;
+const float ROBOT_WIDTH_HALF = 0.6/2;
 
 // Размер карты
 int localMapSize = 0;
@@ -86,7 +86,7 @@ void odometryCallback(const nav_msgs::Odometry data){
   yawAngle = tf::getYaw(pose.getRotation());
 
   // Координата смещения лазера относительно центра платформы
-  float laserOffsetX = 0.25;
+  float laserOffsetX = 0.24;
   float laserOffsetY = 0;
 
   // Составляющая поворота
@@ -128,7 +128,7 @@ void localMapCallback( nav_msgs::OccupancyGrid data){
 
 void connectLocalAndGlobalMaps(){
   if(isCameOdom){
-    float k = 0.9;
+    float k = 0.95;
     for(int i = 0; i < localMapSize; i++){
       for(int j = 0; j < localMapSize; j++){
         if(i < globalMapSize && j < globalMapSize){
@@ -174,7 +174,7 @@ void formGlobalMapMessage(){
     globalMapMessage.data[i] = globalMap[i];
   }
 
-  drawCircleObstacles(globalMapMessage, ROBOT_WIDTH_HALF);
+  //drawCircleObstacles(globalMapMessage, ROBOT_WIDTH_HALF);
 }
 
 void drawCircleObstacles(nav_msgs::OccupancyGrid& map, float radius){

@@ -89,7 +89,7 @@ void odometryCallback(const nav_msgs::Odometry &data){
   yawAngle = tf::getYaw(pose.getRotation());
 
   // Координата смещения лазера относительно центра платформы
-  float laserOffsetX = 0.25;
+  float laserOffsetX = 0.24;
   float laserOffsetY = 0;
 
   // Составляющая поворота
@@ -108,53 +108,59 @@ void goToNewCoordinates(){
   geometry_msgs::Twist data;
   cout << "Tar path size " << targetPath.size() << endl;
 
-  float distToTarget = sqrt(pow((currentPosition.y) - targetPath[0].y, 2)
-      + pow((currentPosition.x) - targetPath[0].x, 2));
-
-  cout << "x " << currentPosition.x << " y " << currentPosition.y  << " dist " << distToTarget << endl;
-  cout << "Target x: " << targetPath[0].x << " y: " << targetPath[0].y << endl;
-
-  if(distToTarget > 0.2){
-    distToTarget = sqrt(pow((currentPosition.y) - targetPath[0].y, 2)
+  if(targetPath.size()){
+    float distToTarget = sqrt(pow((currentPosition.y) - targetPath[0].y, 2)
         + pow((currentPosition.x) - targetPath[0].x, 2));
-    //    float targetAngle = atan2(targetPath[0].y - currentPosition.y, targetPath[0].x - currentPosition.x);
-    float targetAngle = targetPath[0].z;
-    float angleDiff = yawAngle - targetAngle;
-    if(angleDiff > M_PI)
-      angleDiff -= 2 * M_PI;
-    if(angleDiff < -M_PI)
-      angleDiff += 2 * M_PI;
-    cout << " curAng " << yawAngle << " tarAng " << targetAngle << " diff " << angleDiff << endl;
 
+    cout << "x " << currentPosition.x << " y " << currentPosition.y  << " dist " << distToTarget << endl;
+    cout << "Target x: " << targetPath[0].x << " y: " << targetPath[0].y << endl;
 
-    // П-регулятор для рулевой скорости
-    //    float PKoeff = 3;
-    data.linear.x = 1;
-    if(abs(angleDiff) > 0.01){
-      if(angleDiff > 0.01)
-        data.angular.z = -1;
-      else
-        data.angular.z = 1;
-    }
-    else{
-      data.angular.z = 0;
-      data.linear.x = 1;
-    }
-    // Задание постоянной ходовой скорости
-    publishCommandVelocities(data);
-  }
-  else{
-    if(targetPath.size()){
-      targetPath.erase(targetPath.begin());
-    }
-    else{
-      data.angular.z = 0;
-      data.linear.x = 0;
+    if(distToTarget > 0.2){
+      distToTarget = sqrt(pow((currentPosition.y) - targetPath[0].y, 2)
+          + pow((currentPosition.x) - targetPath[0].x, 2));
+      //    float targetAngle = atan2(targetPath[0].y - currentPosition.y, targetPath[0].x - currentPosition.x);
+      float targetAngle = targetPath[0].z;
+      float angleDiff = yawAngle - targetAngle;
+      if(angleDiff > M_PI)
+        angleDiff -= 2 * M_PI;
+      if(angleDiff < -M_PI)
+        angleDiff += 2 * M_PI;
+      cout << " curAng " << yawAngle << " tarAng " << targetAngle << " diff " << angleDiff << endl;
+
+      // П-регулятор для рулевой скорости
+      //    float PKoeff = 3;
+      data.linear.x = 0.6;
+      if(abs(angleDiff) > 0.01){
+        if(angleDiff > 0.01)
+          data.angular.z = -0.6;
+        else
+          data.angular.z = 0.6;
+      }
+      else{
+        data.angular.z = 0;
+        data.linear.x = 1;
+      }
+      // Задание постоянной ходовой скорости
       publishCommandVelocities(data);
     }
+    else{
+      if(targetPath.size()){
+        targetPath.erase(targetPath.begin());
+      }
+      else{
+        data.angular.z = 0;
+        data.linear.x = 0;
+        publishCommandVelocities(data);
+      }
+    }
+    isCameTarget = false;
+    isCameOdom = false;
   }
-  isCameTarget = false;
-  isCameOdom = false;
+  else{
+    data.angular.z = 0;
+    data.linear.x = 0;
+    publishCommandVelocities(data);
+  }
 }
 
 void publishCommandVelocities(const geometry_msgs::Twist &data){

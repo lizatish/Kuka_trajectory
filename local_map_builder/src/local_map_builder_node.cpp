@@ -27,7 +27,7 @@ nav_msgs::OccupancyGrid localMapMessage;
 // Текущий скан
 sensor_msgs::LaserScan current_scan;
 // Ширина Куки
-const float ROBOT_WIDTH_HALF = 0.45/2;
+const float ROBOT_WIDTH_HALF = 0.6/2;
 // Пришел ли скан
 bool isActualScanData = false;
 

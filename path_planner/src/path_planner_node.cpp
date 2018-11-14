@@ -15,7 +15,7 @@ void pathMessageInitParams();
 // Сообщение с путем
 nav_msgs::Path pathMessage;
 
-const float ROBOT_WIDTH_HALF = 0.45/2;
+const float ROBOT_WIDTH_HALF = 0.6/2;
 const float CURVATURE = 1;
 
 vector<geometry_msgs::Point> path;
@@ -50,8 +50,8 @@ int main(int argc, char **argv){
   pathMessageInitParams();
 
   geometry_msgs::Point goal;
-  goal.x = 0;
-  goal.y = 0;
+  goal.x = 2;
+  goal.y = 3;
   goal.z = 0;
 
   ros::Rate rate(100);
@@ -69,7 +69,7 @@ int main(int argc, char **argv){
         delete rrt;
 
         if(path.size()){
-          cout << "Path is found " << pathMessage.poses.size() << endl;
+          cout << "Path is found " << path.size() << endl;
           geometry_msgs::PoseStamped point;
           for (int k = path.size() - 1; k >= 0; k--){
             float nx = path[k].x;
@@ -144,7 +144,7 @@ void odometryCallback(const nav_msgs::Odometry data){
   yawAngle = tf::getYaw(pose.getRotation());
 
   // Координата смещения лазера относительно центра платформы
-  float laserOffsetX = 0.25;
+  float laserOffsetX = 0.24;
   float laserOffsetY = 0;
 
   // Составляющая поворота
