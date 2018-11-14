@@ -50,8 +50,8 @@ int main(int argc, char **argv){
   pathMessageInitParams();
 
   geometry_msgs::Point goal;
-  goal.x = 5;
-  goal.y = 5;
+  goal.x = 0;
+  goal.y = 0;
   goal.z = 0;
 
   ros::Rate rate(100);
@@ -63,13 +63,9 @@ int main(int argc, char **argv){
         isCameOdom = false;
         isCameGlobalMap = false;
 
-        cout << "Search path" << endl;
-
         // Запуск планировщика
         RRT* rrt = new RRT();
-        //        ros::Time start_time = ros::Time::now();
         path = rrt->Planning(currentPosition, goal, globalMap, CURVATURE, ROBOT_WIDTH_HALF);
-        //        cout << "Time of cicle " << (ros::Time::now().toSec() - start_time.toSec()) <<  endl;
         delete rrt;
 
         if(path.size()){
@@ -84,7 +80,11 @@ int main(int argc, char **argv){
             target_path.poses.push_back(point);
           }
           target_path_pub.publish(target_path);
-
+          formPathMessage();
+        }
+        else{
+          cout << "Path is not found" << endl;
+          target_path_pub.publish(target_path);
           formPathMessage();
         }
       }
@@ -96,7 +96,7 @@ int main(int argc, char **argv){
       delete rrt_check;
 
       if(path_for_check.size() && (path_for_check.size() < path.size())){
-        cout << "Find shorter path" << endl;
+        cout << "Find shorter path, size "  << path_for_check.size() << endl;
 
         pathMessage.poses.clear();
         path.clear();
@@ -115,7 +115,6 @@ int main(int argc, char **argv){
         target_path_pub.publish(target_path);
 
         formPathMessage();
-        cout << "Path size " << pathMessage.poses.size() << endl;
       }
       else{
         // Проверка на пересечение с новой картой
@@ -126,7 +125,7 @@ int main(int argc, char **argv){
             pathMessage.poses.clear();
             path.clear();
             target_path.poses.clear();
-            cout << "Path will change" << endl;
+            cout << "OBSTACLE! Search new path" << endl;
           }
         }
       }
@@ -145,7 +144,7 @@ void odometryCallback(const nav_msgs::Odometry data){
   yawAngle = tf::getYaw(pose.getRotation());
 
   // Координата смещения лазера относительно центра платформы
-  float laserOffsetX = 0;
+  float laserOffsetX = 0.25;
   float laserOffsetY = 0;
 
   // Составляющая поворота

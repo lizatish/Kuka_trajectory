@@ -64,18 +64,18 @@ int main(int argc, char **argv){
   }
 }
 void targetPathCallback(const nav_msgs::Path &data){
-  if(data.poses.size() && !isCameTargetPath){
-    for(int i = 0; i < data.poses.size(); i++){
-      geometry_msgs::PoseStamped point = data.poses.at(i);
-      geometry_msgs::Point p;
-      p.x = point.pose.position.x;
-      p.y = point.pose.position.y;
-      p.z = point.pose.position.z;
-      targetPath.push_back(p);
-    }
-    isCameTargetPath = true;
-    cout << targetPath.size() << endl;
+  targetPath.clear();
+  for(int i = 0; i < data.poses.size(); i++){
+    geometry_msgs::PoseStamped point = data.poses.at(i);
+    geometry_msgs::Point p;
+    p.x = point.pose.position.x;
+    p.y = point.pose.position.y;
+    p.z = point.pose.position.z;
+    targetPath.push_back(p);
   }
+
+  isCameTargetPath = true;
+  cout << "Target path changed, new size is " << targetPath.size() << endl;
 }
 void targetPointCallBack(const geometry_msgs::Point &data){
   targetPoint = data;
@@ -89,7 +89,7 @@ void odometryCallback(const nav_msgs::Odometry &data){
   yawAngle = tf::getYaw(pose.getRotation());
 
   // Координата смещения лазера относительно центра платформы
-  float laserOffsetX = 0;
+  float laserOffsetX = 0.25;
   float laserOffsetY = 0;
 
   // Составляющая поворота

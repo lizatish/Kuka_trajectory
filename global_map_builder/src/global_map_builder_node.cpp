@@ -39,7 +39,7 @@ float yawAngle;
 
 nav_msgs::OccupancyGrid localMap_metric;
 bool isCameOdom = false;
-bool isCameLocalMap = false;
+
 
 void odometryCallback(const nav_msgs::Odometry data);
 void connectLocalAndGlobalMaps();
@@ -50,7 +50,7 @@ void drawCircleObstacles(nav_msgs::OccupancyGrid& map, float radius);
 void formObstacleList();
 
 int main(int argc, char **argv){
-  ros::init(argc, argv, "kuka_global_map_node");
+  ros::init(argc, argv, "global_map_node");
 
   ros::NodeHandle m;
   ros::Subscriber local_map_sub = m.subscribe("/local_map", 8, localMapCallback);
@@ -63,21 +63,18 @@ int main(int argc, char **argv){
   ros::Rate rate(100);
   while(isAllowProcess && ros::ok()) {
 
-    if(isCameLocalMap && isCameOdom){
-      isCameOdom = false;
-      isCameLocalMap = false;
-      connectLocalAndGlobalMaps();
+    connectLocalAndGlobalMaps();
+    formObstacleList();
+    obstacle_list_pub.publish(obstacleListMessage);
 
-      formObstacleList();
-      obstacle_list_pub.publish(obstacleListMessage);
+    // Формирование сообщения с картой
+    formGlobalMapMessage();
+    global_map_pub.publish(globalMapMessage);
 
-      // Формирование сообщения с картой
-      formGlobalMapMessage();
-      global_map_pub.publish(globalMapMessage);
+    cout << "Global map is coming" << endl;
+    localMap.clear();
+    obstacleListMessage.points.clear();
 
-      localMap.clear();
-      obstacleListMessage.points.clear();
-    }
     rate.sleep();
     ros::spinOnce();
   }
@@ -89,7 +86,7 @@ void odometryCallback(const nav_msgs::Odometry data){
   yawAngle = tf::getYaw(pose.getRotation());
 
   // Координата смещения лазера относительно центра платформы
-  float laserOffsetX = 0;
+  float laserOffsetX = 0.25;
   float laserOffsetY = 0;
 
   // Составляющая поворота
@@ -99,7 +96,8 @@ void odometryCallback(const nav_msgs::Odometry data){
   // Окончательные начальные координаты
   currentPosition.x = data.pose.pose.position.x + laserRotationX;
   currentPosition.y = data.pose.pose.position.y + laserRotationY;
-  cout << currentPosition.x << " " << currentPosition.y << " " << yawAngle << endl;
+
+  //  cout << currentPosition.x << " " << currentPosition.y << " " << yawAngle << endl;
 
   isCameOdom = true;
 }
@@ -126,30 +124,31 @@ void localMapCallback( nav_msgs::OccupancyGrid data){
   for(int i = 0; i < localMapSize * localMapSize; i++){
     localMap[i] = data.data[i];
   }
-  isCameLocalMap = true;
 }
 
 void connectLocalAndGlobalMaps(){
-  float k = 0.9;
-  for(int i = 0; i < localMapSize; i++){
-    for(int j = 0; j < localMapSize; j++){
-      if(i < globalMapSize && j < globalMapSize){
+  if(isCameOdom){
+    float k = 0.9;
+    for(int i = 0; i < localMapSize; i++){
+      for(int j = 0; j < localMapSize; j++){
+        if(i < globalMapSize && j < globalMapSize){
 
-        int rotationX = (i - localMapSize/2) * cos(yawAngle) - (j - localMapSize/2) * sin(yawAngle);
-        int rotationY = (i - localMapSize/2) * sin(yawAngle) + (j - localMapSize/2) * cos(yawAngle);
+          int rotationX = (i - localMapSize/2) * cos(yawAngle) - (j - localMapSize/2) * sin(yawAngle);
+          int rotationY = (i - localMapSize/2) * sin(yawAngle) + (j - localMapSize/2) * cos(yawAngle);
 
-        int x = globalMapSize / 2 + currentPosition.x/mapResolution + (rotationX);
-        int y = globalMapSize / 2 + currentPosition.y/mapResolution + (rotationY);
+          int x = globalMapSize / 2 + currentPosition.x/mapResolution + (rotationX);
+          int y = globalMapSize / 2 + currentPosition.y/mapResolution + (rotationY);
 
-        if(localMap[localMapSize * j + i] == 50){
-          continue;
+          if(localMap[localMapSize * j + i] == 50){
+            continue;
+          }
+
+          int value = globalMap[globalMapSize * int(y) + int(x)] * k
+              + localMap[localMapSize * j + i] * (1 - k);
+
+          globalMap[globalMapSize * y + x] = value;
+
         }
-
-        int value = globalMap[globalMapSize * int(y) + int(x)] * k
-            + localMap[localMapSize * j + i] * (1 - k);
-
-        globalMap[globalMapSize * y + x] = value;
-
       }
     }
   }
@@ -183,6 +182,7 @@ void drawCircleObstacles(nav_msgs::OccupancyGrid& map, float radius){
   // Проходим по всем координатам препятствий
   for(int i = 0; i < obstacleListMessage.points.size(); i++){
     geometry_msgs::Point32 p0 = obstacleListMessage.points.at(i);
+
     int x0 = p0.x/mapResolution + globalMapSize/2;
     int y0 = p0.y/mapResolution + globalMapSize/2;
     // Рисуем препятствие
