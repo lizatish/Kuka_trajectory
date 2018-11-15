@@ -139,15 +139,16 @@ void connectLocalAndGlobalMaps(){
           int x = globalMapSize / 2 + currentPosition.x/mapResolution + (rotationX);
           int y = globalMapSize / 2 + currentPosition.y/mapResolution + (rotationY);
 
+          int value = globalMap[globalMapSize * y + x] * k
+              + localMap[localMapSize * j + i] * (1 - k);
+
           if(localMap[localMapSize * j + i] == 50){
             continue;
           }
-
-          int value = globalMap[globalMapSize * int(y) + int(x)] * k
-              + localMap[localMapSize * j + i] * (1 - k);
-
+          //        if(localMap[localMapSize * j + i] == 100 || globalMap[globalMapSize * y + x] == 100) {
+          //          value = 100;
+          //        }
           globalMap[globalMapSize * y + x] = value;
-
         }
       }
     }
@@ -174,7 +175,7 @@ void formGlobalMapMessage(){
     globalMapMessage.data[i] = globalMap[i];
   }
 
-  //drawCircleObstacles(globalMapMessage, ROBOT_WIDTH_HALF);
+  drawCircleObstacles(globalMapMessage, ROBOT_WIDTH_HALF);
 }
 
 void drawCircleObstacles(nav_msgs::OccupancyGrid& map, float radius){

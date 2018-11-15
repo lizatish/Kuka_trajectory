@@ -11,7 +11,6 @@ using namespace std;
 
 void odometryCallback(const nav_msgs::Odometry &data);
 void publishCommandVelocities(const geometry_msgs::Twist &data);
-void targetPointCallBack(const geometry_msgs::Point &data);
 void targetPathCallback(const nav_msgs::Path &data);
 void goToNewCoordinates();
 
@@ -19,33 +18,33 @@ void mySigintHandler(int sig);
 static int kfd = 0;
 static struct termios cooked, raw;
 
-//Текущее положение платформы
+//Текущее положение и угол платформы
 geometry_msgs::Point currentPosition;
-// Координаты текущей цели
-geometry_msgs::Point targetPoint;
+float yawAngle;
 
-bool isCameTarget = false;
 bool isCameOdom = false;
 bool isCameTargetPath = false;
 
-float yawAngle;
-
-//Коэффициент для скорости
-float speedCoeff = 1;
-
-//Управляющее сообщение
+// Управляющее сообщение
 geometry_msgs::Twist commandVelocities;
 // Публикатор желаемой скорости базы
 ros::Publisher kuka_movebase_publisher;
-
+// Для хранения целевого путя
 vector<geometry_msgs::Point> targetPath;
+
+//// ИЗМЕНЯЕМЫЕ ПАРАМЕТРЫ
+// Радиус поворота
+const float CURVATURE = 0.5;
+// Минимальне расстояние для достижения цели
+float DIST_TO_TARGET_MIN = 0.2;
+/////////////////////////////
+
 int main(int argc, char **argv){
   // Инициализация ROS
   ros::init(argc, argv, "kuka_traffic_control");
 
   ros::NodeHandle m;
   ros::Subscriber odom_sub = m.subscribe("/odom", 8, odometryCallback);
-  ros::Subscriber target_point_sub = m.subscribe("/target_point", 8, targetPointCallBack);
   ros::Subscriber target_path_sub = m.subscribe("/target_path", 8, targetPathCallback);
 
   kuka_movebase_publisher = m.advertise<geometry_msgs::Twist> ("kuk_keyboard_control/pose_commands", 32);
@@ -77,29 +76,15 @@ void targetPathCallback(const nav_msgs::Path &data){
   isCameTargetPath = true;
   cout << "Target path changed, new size is " << targetPath.size() << endl;
 }
-void targetPointCallBack(const geometry_msgs::Point &data){
-  targetPoint = data;
-  isCameTarget = true;
-}
-
 void odometryCallback(const nav_msgs::Odometry &data){
   // Получение угла поворота
   tf::Pose pose;
   tf::poseMsgToTF(data.pose.pose, pose);
   yawAngle = tf::getYaw(pose.getRotation());
 
-  // Координата смещения лазера относительно центра платформы
-  float laserOffsetX = 0.24;
-  float laserOffsetY = 0;
-
-  // Составляющая поворота
-  float laserRotationX = laserOffsetX * cos(yawAngle) - laserOffsetY * sin(yawAngle);
-  float laserRotationY = laserOffsetX * sin(yawAngle) + laserOffsetY * cos(yawAngle);
-
   // Окончательные начальные координаты
-  currentPosition.x = data.pose.pose.position.x + laserRotationX;
-  currentPosition.y = data.pose.pose.position.y + laserRotationY;
-  //    cout << currentPosition.x << " " << currentPosition.y << " " << yawAngle << endl;
+  currentPosition.x = data.pose.pose.position.x;
+  currentPosition.y = data.pose.pose.position.y;
 
   isCameOdom = true;
 }
@@ -115,26 +100,24 @@ void goToNewCoordinates(){
     cout << "x " << currentPosition.x << " y " << currentPosition.y  << " dist " << distToTarget << endl;
     cout << "Target x: " << targetPath[0].x << " y: " << targetPath[0].y << endl;
 
-    if(distToTarget > 0.2){
+    // Если не достигнуто предельное расстояние до цели
+    if(distToTarget > DIST_TO_TARGET_MIN){
       distToTarget = sqrt(pow((currentPosition.y) - targetPath[0].y, 2)
           + pow((currentPosition.x) - targetPath[0].x, 2));
-      //    float targetAngle = atan2(targetPath[0].y - currentPosition.y, targetPath[0].x - currentPosition.x);
       float targetAngle = targetPath[0].z;
       float angleDiff = yawAngle - targetAngle;
       if(angleDiff > M_PI)
         angleDiff -= 2 * M_PI;
       if(angleDiff < -M_PI)
         angleDiff += 2 * M_PI;
-      cout << " curAng " << yawAngle << " tarAng " << targetAngle << " diff " << angleDiff << endl;
+      //      cout << " curAng " << yawAngle << " tarAng " << targetAngle << " diff " << angleDiff << endl;
 
-      // П-регулятор для рулевой скорости
-      //    float PKoeff = 3;
       data.linear.x = 0.6;
       if(abs(angleDiff) > 0.01){
         if(angleDiff > 0.01)
-          data.angular.z = -0.6;
+          data.angular.z = -0.6/CURVATURE;
         else
-          data.angular.z = 0.6;
+          data.angular.z = 0.6/CURVATURE;
       }
       else{
         data.angular.z = 0;
@@ -143,19 +126,13 @@ void goToNewCoordinates(){
       // Задание постоянной ходовой скорости
       publishCommandVelocities(data);
     }
+    // Если расстояние достигнуто
     else{
-      if(targetPath.size()){
-        targetPath.erase(targetPath.begin());
-      }
-      else{
-        data.angular.z = 0;
-        data.linear.x = 0;
-        publishCommandVelocities(data);
-      }
+      // Удаляем достигнутую точку, если она есть
+      targetPath.erase(targetPath.begin());
     }
-    isCameTarget = false;
-    isCameOdom = false;
   }
+  // Если вектор с целями пуст, то посылаем нулевые скорости
   else{
     data.angular.z = 0;
     data.linear.x = 0;
@@ -166,9 +143,9 @@ void goToNewCoordinates(){
 void publishCommandVelocities(const geometry_msgs::Twist &data){
 
   //Формируем пакет из управления
-  commandVelocities.linear.x = speedCoeff * data.linear.x;
-  commandVelocities.linear.y = speedCoeff * data.linear.y;
-  commandVelocities.angular.z = speedCoeff * data.angular.z;
+  commandVelocities.linear.x = data.linear.x;
+  commandVelocities.linear.y = data.linear.y;
+  commandVelocities.angular.z = data.angular.z;
 
   //Публикуем
   kuka_movebase_publisher.publish(commandVelocities);

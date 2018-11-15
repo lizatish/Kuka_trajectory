@@ -16,7 +16,7 @@ void pathMessageInitParams();
 nav_msgs::Path pathMessage;
 
 const float ROBOT_WIDTH_HALF = 0.6/2;
-const float CURVATURE = 1;
+const float CURVATURE = 0.5;
 
 vector<geometry_msgs::Point> path;
 
@@ -50,13 +50,22 @@ int main(int argc, char **argv){
   pathMessageInitParams();
 
   geometry_msgs::Point goal;
+  //  goal.x = 0.3;
+  //  goal.y = 0;
+  //  goal.z = -1.5;
+
   goal.x = 2;
-  goal.y = 3;
-  goal.z = 0;
+  goal.y = 2;
+  goal.z = 1.5;
+
 
   ros::Rate rate(100);
   bool isAllowProcess = true;
+  ros::Time start_time = ros::Time::now();
   while(ros::ok() && isAllowProcess){
+
+    if(ros::Time::now().toSec() - start_time.toSec() < 1)
+      continue;
 
     if(!path.size()){
       if(isCameOdom && isCameGlobalMap){
@@ -68,6 +77,10 @@ int main(int argc, char **argv){
         path = rrt->Planning(currentPosition, goal, globalMap, CURVATURE, ROBOT_WIDTH_HALF);
         delete rrt;
 
+//        if(path.size() > 100){
+//          path.clear();
+//          continue;
+//        }
         if(path.size()){
           cout << "Path is found " << path.size() << endl;
           geometry_msgs::PoseStamped point;
@@ -143,17 +156,9 @@ void odometryCallback(const nav_msgs::Odometry data){
   tf::poseMsgToTF(data.pose.pose, pose);
   yawAngle = tf::getYaw(pose.getRotation());
 
-  // Координата смещения лазера относительно центра платформы
-  float laserOffsetX = 0.24;
-  float laserOffsetY = 0;
-
-  // Составляющая поворота
-  float laserRotationX = laserOffsetX * cos(yawAngle) - laserOffsetY * sin(yawAngle);
-  float laserRotationY = laserOffsetX * sin(yawAngle) + laserOffsetY * cos(yawAngle);
-
   // Окончательные начальные координаты
-  currentPosition.x = data.pose.pose.position.x + laserRotationX;
-  currentPosition.y = data.pose.pose.position.y + laserRotationY;
+  currentPosition.x = data.pose.pose.position.x;
+  currentPosition.y = data.pose.pose.position.y;
   currentPosition.z = yawAngle;
   //  cout << currentPosition.x << " " << currentPosition.y << " " << yawAngle << endl;
   isCameOdom = true;
@@ -175,16 +180,6 @@ void formPathMessage(){
 
     point.pose.position.x = nx - mapSize/2*mapResolution;
     point.pose.position.y = ny - mapSize/2*mapResolution;
-
-    if(k == path.size() - 1){
-      pointToSend.x = point.pose.position.x;
-      pointToSend.y = point.pose.position.y;
-      pointToSend.z = path[k].z;
-
-      //      cout << "Target " << pointToSend.x << " " << pointToSend.y << endl;
-    }
-
-    //    cout << point.pose.position.x << " " << point.pose.position.y << " " << path[k].z<< endl;
     pathMessage.poses.push_back(point);
   }
 }

@@ -73,7 +73,6 @@ void initLocalMap(){
   for(int i = 0; i < mapSize * mapSize; i++){
     localMap.push_back(50);
   }
-
 }
 
 // Сортировка данных с лазерного сканера
@@ -100,24 +99,24 @@ void setMap(vector<float> theta, vector<float> r){
     }
 
   for(uint m = 0; m < r.size(); m++){
-    if(r[m] >= 6){
-      r[m] = 6;
-      // Преобразование координат новой точки из ПСК в ДСК
-      float x2 = r[m] * cos(theta[m])/mapResolution + mapSize/2;
-      float y2 = r[m] * sin(theta[m])/mapResolution + mapSize/2;
+    //    if(r[m] >= 6){
+    //      r[m] = 6;
+    //      // Преобразование координат новой точки из ПСК в ДСК
+    //      float x2 = r[m] * cos(theta[m])/mapResolution + mapSize/2;
+    //      float y2 = r[m] * sin(theta[m])/mapResolution + mapSize/2;
 
-      if(x2 >= 0 && x2 < mapSize && y2 >= 0 && y2 < mapSize) {
-        for(float dist = 0; dist < r[m]; dist += mapResolution) {
+    //      if(x2 >= 0 && x2 < mapSize && y2 >= 0 && y2 < mapSize) {
+    //        for(float dist = 0; dist < r[m]; dist += mapResolution) {
 
-          float x3 = dist * cos(theta[m])/mapResolution - ROBOT_WIDTH_HALF + mapSize/2;
-          float y3 = dist * sin(theta[m])/mapResolution - ROBOT_WIDTH_HALF + mapSize/2;
+    //          int x3 = dist * cos(theta[m])/mapResolution - ROBOT_WIDTH_HALF + mapSize/2;
+    //          int y3 = dist * sin(theta[m])/mapResolution - ROBOT_WIDTH_HALF + mapSize/2;
 
-          localMap[mapSize * (int)y3 + (int)x3] = 25;
-        }
+    //          localMap[mapSize * y3 + x3] = 25;
+    //        }
+    //      }
+    //    }
+    if(r[m] < 6 && r[m] > ROBOT_WIDTH_HALF){
 
-      }
-    }
-    if(r[m] < 6){
       // Преобразование координат новой точки из ПСК в ДСК
       int x2 = r[m] * cos(theta[m])/mapResolution + mapSize/2;
       int y2 = r[m] * sin(theta[m])/mapResolution + mapSize/2;
