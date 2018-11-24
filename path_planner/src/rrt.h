@@ -2,6 +2,7 @@
 #define RRT_H
 
 #include <geometry_msgs/Point.h>
+#include <geometry_msgs/Pose2D.h>
 #include <nav_msgs/OccupancyGrid.h>
 
 #include <math.h>
@@ -74,7 +75,7 @@ public:
   RRT();
 
   // Начать планирование
-  vector<geometry_msgs::Point> Planning(geometry_msgs::Point s, geometry_msgs::Point g,
+  vector<geometry_msgs::Point> Planning(geometry_msgs::Pose2D s, geometry_msgs::Pose2D g,
                                         const nav_msgs::OccupancyGrid& gMap, float curv,
                                         float robot_width_half,int maxIter0 = 100);
 };

@@ -2,7 +2,7 @@
 
 RRT::RRT(){
 }
-vector<geometry_msgs::Point> RRT::Planning(geometry_msgs::Point s, geometry_msgs::Point g,
+vector<geometry_msgs::Point> RRT::Planning(geometry_msgs::Pose2D s, geometry_msgs::Pose2D g,
                                            const nav_msgs::OccupancyGrid& gMap , float curv,
                                            float robot_width_half, int maxIter0)
 {
@@ -17,8 +17,8 @@ vector<geometry_msgs::Point> RRT::Planning(geometry_msgs::Point s, geometry_msgs
   maxIter = maxIter0;
   curvature = curv;
 
-  start = new Node(metrs2cells(s.x), metrs2cells(s.y), s.z);
-  end = new Node(metrs2cells(g.x), metrs2cells(g.y), g.z);
+  start = new Node(metrs2cells(s.x), metrs2cells(s.y), s.theta);
+  end = new Node(metrs2cells(g.x), metrs2cells(g.y), g.theta);
 
   nodeList.push_back(start);
 

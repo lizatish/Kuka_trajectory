@@ -1,7 +1,7 @@
 #include "rrt.h"
 #include <ros/ros.h>
 #include <nav_msgs/Path.h>
-#include <geometry_msgs/Polygon.h>
+#include <geometry_msgs/Pose2D.h>
 #include <tf/transform_listener.h>
 #include <nav_msgs/Odometry.h>
 #include <nav_msgs/OccupancyGrid.h>
@@ -28,9 +28,7 @@ int mapHeight = 10;
 int mapWidth = 10;
 
 //Текущее положение платформы
-geometry_msgs::Point currentPosition;
-// Угол поворота робота
-float yawAngle;
+geometry_msgs::Pose2D currentPosition;
 
 nav_msgs::OccupancyGrid globalMap;
 bool isCameGlobalMap = false;
@@ -53,14 +51,14 @@ int main(int argc, char **argv){
 
   pathMessageInitParams();
 
-  geometry_msgs::Point goal;
+  geometry_msgs::Pose2D goal;
   //      goal.x = 0.3;
   //      goal.y = 0;
   //      goal.z = -1.5;
 
   goal.x = 5;
   goal.y = 3;
-  goal.z = -1.5;
+  goal.theta = -1.5;
 
   //    goal.x = 4;
   //    goal.y = 0.5;
@@ -162,12 +160,11 @@ void odometryCallback(const nav_msgs::Odometry data){
   // Получение угла поворота
   tf::Pose pose;
   tf::poseMsgToTF(data.pose.pose, pose);
-  yawAngle = tf::getYaw(pose.getRotation());
 
   // Окончательные начальные координаты
   currentPosition.x = data.pose.pose.position.x;
   currentPosition.y = data.pose.pose.position.y;
-  currentPosition.z = yawAngle;
+  currentPosition.theta = tf::getYaw(pose.getRotation());;
   isCameOdom = true;
 }
 
