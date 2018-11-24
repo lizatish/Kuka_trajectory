@@ -7,8 +7,10 @@
 #include <nav_msgs/OccupancyGrid.h>
 
 void odometryCallback(const nav_msgs::Odometry data);
-void formPathMessage();
 void globalMapCallback(const nav_msgs::OccupancyGrid& data);
+void mapMetaDataCallback(const nav_msgs::MapMetaData& data);
+void formPathMessage();
+
 // Инициализация параметров карты и пути
 void pathMessageInitParams();
 
@@ -22,6 +24,8 @@ const float CURVATURE = 0.2;
 // Размер карты
 float mapResolution = 0;
 int mapSize = 0;
+int mapHeight = 10;
+int mapWidth = 10;
 
 //Текущее положение платформы
 geometry_msgs::Point currentPosition;
@@ -42,6 +46,7 @@ int main(int argc, char **argv){
   ros::NodeHandle l;
   ros::Publisher path_pub = l.advertise<nav_msgs::Path>("/path_rrt", 8);
   ros::Publisher target_path_pub = l.advertise<nav_msgs::Path>("/target_path", 8);
+  ros::Subscriber map_metadata_sub = l.subscribe("/map_metadata", 8, mapMetaDataCallback);
   ros::Publisher target_point_pab = l.advertise<geometry_msgs::Point> ("/target_point", 8);
   ros::Subscriber global_map_sub = l.subscribe("/global_map", 8, globalMapCallback);
   ros::Subscriber odom_sub = l.subscribe("/odom", 8, odometryCallback);
@@ -163,7 +168,6 @@ void odometryCallback(const nav_msgs::Odometry data){
   currentPosition.x = data.pose.pose.position.x;
   currentPosition.y = data.pose.pose.position.y;
   currentPosition.z = yawAngle;
-  //  cout << currentPosition.x << " " << currentPosition.y << " " << yawAngle << endl;
   isCameOdom = true;
 }
 
@@ -173,6 +177,13 @@ void globalMapCallback(const nav_msgs::OccupancyGrid& data){
   globalMap = data;
   isCameGlobalMap = true;
 }
+
+void mapMetaDataCallback(const nav_msgs::MapMetaData& data){
+  mapResolution = data.resolution;
+  mapHeight = data.height;
+  mapWidth = data.width;
+}
+
 
 void formPathMessage(){
   // Точка для загрузки в сообщение пути

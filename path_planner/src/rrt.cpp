@@ -275,12 +275,14 @@ bool RRT::collisionCheck(Node* node){
 
     for(int i = ix - ROBOT_HEIGHT/2; i < ix + ROBOT_HEIGHT/2; i++){
       for(int j = iy - ROBOT_WIDTH/2; j < iy + ROBOT_WIDTH/2; j++){
-
+        if(globalMap.data[mapSize * j + i] == 100){
+          return false;
+        }
       }
     }
-    if(globalMap.data[mapSize * iy + ix] == 100){
-      return false;
-    }
+    //    if(globalMap.data[mapSize * iy + ix] == 100){
+    //      return false;
+    //    }
   }
   return true;
 }

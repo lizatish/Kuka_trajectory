@@ -15,17 +15,12 @@
 #include <iostream>
 using namespace std;
 
-geometry_msgs::Polygon obstacleListMessage;
-
 // Текущая локальная карта
 vector<int> localMap;
-
 // Текущая открытая глобальная карта
 vector<int> globalMap;
 
 nav_msgs::OccupancyGrid globalMapMessage;
-// Ширина Куки
-const float ROBOT_WIDTH_HALF = 0.6/2;
 
 // Размер карты
 int localMapSize = 0;
@@ -45,8 +40,6 @@ void connectLocalAndGlobalMaps();
 void localMapCallback(nav_msgs::OccupancyGrid data);
 void globalMapMessageInitParams();
 void formGlobalMapMessage();
-void drawCircleObstacles(nav_msgs::OccupancyGrid& map, float radius);
-void formObstacleList();
 
 int main(int argc, char **argv){
   ros::init(argc, argv, "global_map_node");
@@ -55,7 +48,6 @@ int main(int argc, char **argv){
   ros::Subscriber local_map_sub = m.subscribe("/local_map", 8, localMapCallback);
   ros::Subscriber odom_sub = m.subscribe("/odom", 8, odometryCallback);
   ros::Publisher global_map_pub = m.advertise<nav_msgs::OccupancyGrid>("/global_map", 2);
-  ros::Publisher obstacle_list_pub = m.advertise<geometry_msgs::Polygon>("/obstacle_list", 2);
 
   bool isAllowProcess = true;
   globalMapMessageInitParams();
@@ -63,16 +55,12 @@ int main(int argc, char **argv){
   while(isAllowProcess && ros::ok()) {
 
     connectLocalAndGlobalMaps();
-    formObstacleList();
-    obstacle_list_pub.publish(obstacleListMessage);
-
     // Формирование сообщения с картой
     formGlobalMapMessage();
     global_map_pub.publish(globalMapMessage);
 
     //cout << "Global map is coming" << endl;
     localMap.clear();
-    obstacleListMessage.points.clear();
 
     rate.sleep();
     ros::spinOnce();
@@ -100,21 +88,6 @@ void odometryCallback(const nav_msgs::Odometry data){
 
   isCameOdom = true;
 }
-
-void formObstacleList(){
-  for(int i = 0; i < globalMapSize; i++){
-    for(int j = 0; j < globalMapSize; j++){
-      if(globalMap[globalMapSize * j + i] >= 75){
-        geometry_msgs::Point32 p;
-        p.x = (i - globalMapSize/2)*mapResolution;
-        p.y = (j - globalMapSize/2)*mapResolution;
-
-        obstacleListMessage.points.push_back(p);
-      }
-    }
-  }
-}
-
 void localMapCallback( nav_msgs::OccupancyGrid data){
   localMapSize = data.info.height;
 
@@ -172,33 +145,5 @@ void globalMapMessageInitParams(){
 void formGlobalMapMessage(){
   for(int i = 0; i < globalMapSize*globalMapSize; i++){
     globalMapMessage.data[i] = globalMap[i];
-  }
-
-  drawCircleObstacles(globalMapMessage, ROBOT_WIDTH_HALF);
-}
-
-void drawCircleObstacles(nav_msgs::OccupancyGrid& map, float radius){
-
-  // Проходим по всем координатам препятствий
-  for(int i = 0; i < obstacleListMessage.points.size(); i++){
-    geometry_msgs::Point32 p0 = obstacleListMessage.points.at(i);
-
-    int x0 = p0.x/mapResolution + globalMapSize/2;
-    int y0 = p0.y/mapResolution + globalMapSize/2;
-    // Рисуем препятствие
-    map.data[globalMapSize * (y0) + (x0)] = 100;
-
-    // Отрисовка кругов
-    for(int p = x0 - int(radius / mapResolution) - 1; p < x0 + int(radius/ mapResolution + 1); p++) {
-      for(int q = y0 - int(radius / mapResolution - 1); q < y0 + int(radius / mapResolution + 1); q++) {
-
-        float dist =  sqrt(pow((p - x0), 2) + pow((q - y0), 2))*mapResolution;
-        if(dist > radius)
-          continue;
-
-        // Рисуем то, что будет кругом впоследствии
-        map.data[globalMapSize * q + p] = 100;
-      }
-    }
   }
 }
