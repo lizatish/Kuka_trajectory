@@ -31,12 +31,12 @@ private:
   Node* start;
   Node* end;
 
-  int goalSampleRate;
+  float goalSampleRate;
   // Количество итераций
   int maxIter;
 
-  // Минимально возможное расстояния до препятствия
-  float minDistToObstacle;
+  float ROBOT_WIDTH = 0.5;
+  float ROBOT_HEIGHT = 0.7;
 
   // Лист с открытыми узлами и путями к ним
   vector<Node*> nodeList;
@@ -76,7 +76,7 @@ public:
   // Начать планирование
   vector<geometry_msgs::Point> Planning(geometry_msgs::Point s, geometry_msgs::Point g,
                                         const nav_msgs::OccupancyGrid& gMap, float curv,
-                                        float robot_width_half,int maxIter0 = 120);
+                                        float robot_width_half,int maxIter0 = 100);
 };
 
 #endif // RRT_H

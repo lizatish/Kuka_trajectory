@@ -37,7 +37,6 @@ geometry_msgs::Point currentPosition;
 // Угол поворота робота
 float yawAngle;
 
-nav_msgs::OccupancyGrid localMap_metric;
 bool isCameOdom = false;
 
 
@@ -71,7 +70,7 @@ int main(int argc, char **argv){
     formGlobalMapMessage();
     global_map_pub.publish(globalMapMessage);
 
-    cout << "Global map is coming" << endl;
+    //cout << "Global map is coming" << endl;
     localMap.clear();
     obstacleListMessage.points.clear();
 
@@ -97,7 +96,7 @@ void odometryCallback(const nav_msgs::Odometry data){
   currentPosition.x = data.pose.pose.position.x + laserRotationX;
   currentPosition.y = data.pose.pose.position.y + laserRotationY;
 
-  //  cout << currentPosition.x << " " << currentPosition.y << " " << yawAngle << endl;
+  cout << currentPosition.x << " " << currentPosition.y << " " << yawAngle << endl;
 
   isCameOdom = true;
 }

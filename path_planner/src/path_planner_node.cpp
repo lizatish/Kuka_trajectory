@@ -14,11 +14,10 @@ void pathMessageInitParams();
 
 // Сообщение с путем
 nav_msgs::Path pathMessage;
+vector<geometry_msgs::Point> path;
 
 const float ROBOT_WIDTH_HALF = 0.6/2;
-const float CURVATURE = 0.5;
-
-vector<geometry_msgs::Point> path;
+const float CURVATURE = 0.2;
 
 // Размер карты
 float mapResolution = 0;
@@ -50,13 +49,17 @@ int main(int argc, char **argv){
   pathMessageInitParams();
 
   geometry_msgs::Point goal;
-  //  goal.x = 0.3;
-  //  goal.y = 0;
-  //  goal.z = -1.5;
+  //      goal.x = 0.3;
+  //      goal.y = 0;
+  //      goal.z = -1.5;
 
-  goal.x = 2;
-  goal.y = 2;
-  goal.z = 1.5;
+  goal.x = 5;
+  goal.y = 3;
+  goal.z = -1.5;
+
+  //    goal.x = 4;
+  //    goal.y = 0.5;
+  //    goal.z = 0;
 
 
   ros::Rate rate(100);
@@ -77,10 +80,10 @@ int main(int argc, char **argv){
         path = rrt->Planning(currentPosition, goal, globalMap, CURVATURE, ROBOT_WIDTH_HALF);
         delete rrt;
 
-//        if(path.size() > 100){
-//          path.clear();
-//          continue;
-//        }
+        //        if(path.size() > 110){
+        //          path.clear();
+        //          continue;
+        //        }
         if(path.size()){
           cout << "Path is found " << path.size() << endl;
           geometry_msgs::PoseStamped point;
@@ -108,7 +111,7 @@ int main(int argc, char **argv){
       path_for_check = rrt_check->Planning(currentPosition, goal, globalMap, CURVATURE, ROBOT_WIDTH_HALF);
       delete rrt_check;
 
-      if(path_for_check.size() && (path_for_check.size() < path.size())){
+      if(path_for_check.size() && (path_for_check.size() + 20 < path.size())){
         cout << "Find shorter path, size "  << path_for_check.size() << endl;
 
         pathMessage.poses.clear();

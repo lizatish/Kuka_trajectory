@@ -290,7 +290,7 @@ DubinsPathPlanning::coords DubinsPathPlanning::generate_course(float* length, st
     float pd = 0.0;
     float d;
     if (mode[i] == 'S'){
-      d = 30.0 * M_PI / 180;
+      d = 20.0 / c * M_PI / 180;
     }
     else{
       d = 3.0 * M_PI / 180;

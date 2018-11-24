@@ -34,9 +34,9 @@ vector<geometry_msgs::Point> targetPath;
 
 //// ИЗМЕНЯЕМЫЕ ПАРАМЕТРЫ
 // Радиус поворота
-const float CURVATURE = 0.5;
+const float CURVATURE = 0.2;
 // Минимальне расстояние для достижения цели
-float DIST_TO_TARGET_MIN = 0.2;
+float DIST_TO_TARGET_MIN = 0.1;
 /////////////////////////////
 
 int main(int argc, char **argv){
@@ -110,19 +110,25 @@ void goToNewCoordinates(){
         angleDiff -= 2 * M_PI;
       if(angleDiff < -M_PI)
         angleDiff += 2 * M_PI;
-      //      cout << " curAng " << yawAngle << " tarAng " << targetAngle << " diff " << angleDiff << endl;
+      cout << " curAng " << yawAngle << " tarAng " << targetAngle << " diff " << angleDiff << endl;
 
-      data.linear.x = 0.6;
+      data.linear.x = 1;
       if(abs(angleDiff) > 0.01){
         if(angleDiff > 0.01)
-          data.angular.z = -0.6/CURVATURE;
+          data.angular.z = -1/CURVATURE;
         else
-          data.angular.z = 0.6/CURVATURE;
+          data.angular.z = 1/CURVATURE;
       }
       else{
         data.angular.z = 0;
         data.linear.x = 1;
       }
+
+      //      float deltaX = currentPosition.x - targetPath[0].x;
+      //      float deltaY = currentPosition.y - targetPath[0].y;
+
+      //      data.linear.x = -4*deltaX;
+      //      data.linear.y = -4*deltaY;
       // Задание постоянной ходовой скорости
       publishCommandVelocities(data);
     }

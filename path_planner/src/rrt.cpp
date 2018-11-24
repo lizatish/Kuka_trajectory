@@ -13,10 +13,9 @@ vector<geometry_msgs::Point> RRT::Planning(geometry_msgs::Point s, geometry_msgs
   minRand = 0;
   maxRand = mapSize*mapResolution;
   // РАЗОБРАТЬСЯ С ЭТИМ ПАРАМЕТРОМ
-  goalSampleRate = 10;
+  goalSampleRate = 1;
   maxIter = maxIter0;
   curvature = curv;
-  minDistToObstacle = robot_width_half;
 
   start = new Node(metrs2cells(s.x), metrs2cells(s.y), s.z);
   end = new Node(metrs2cells(g.x), metrs2cells(g.y), g.z);
@@ -269,12 +268,16 @@ int RRT::getNearestListIndex(Node* rnd){
 // Проверка на пересечение с препятствиями
 bool RRT::collisionCheck(Node* node){
 
-  int ix = 0, iy = 0;
-  for(int j = 0; j < node->path_x.size(); j++){
+  for(int k = 0; k < node->path_x.size(); k++){
 
-    ix = int(node->path_x[j]/mapResolution);
-    iy = int(node->path_y[j]/mapResolution);
+    int ix = int(node->path_x[k]/mapResolution);
+    int iy = int(node->path_y[k]/mapResolution);
 
+    for(int i = ix - ROBOT_HEIGHT/2; i < ix + ROBOT_HEIGHT/2; i++){
+      for(int j = iy - ROBOT_WIDTH/2; j < iy + ROBOT_WIDTH/2; j++){
+
+      }
+    }
     if(globalMap.data[mapSize * iy + ix] == 100){
       return false;
     }
