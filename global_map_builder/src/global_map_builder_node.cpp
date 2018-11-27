@@ -25,7 +25,9 @@ nav_msgs::OccupancyGrid globalMapMessage;
 // Размер карты
 int localMapSize = 0;
 float mapResolution = 0.04;
-int globalMapSize = 20 / mapResolution;
+//int globalMapSize = 20 / mapResolution;
+int map_height = 20 / mapResolution;
+int map_width = 30 / mapResolution;
 
 //Текущее положение платформы
 geometry_msgs::Point currentPosition;
@@ -103,15 +105,15 @@ void connectLocalAndGlobalMaps(){
     float k = 0.95;
     for(int i = 0; i < localMapSize; i++){
       for(int j = 0; j < localMapSize; j++){
-        if(i < globalMapSize && j < globalMapSize){
+        if(i < map_height && j < map_width){
 
           int rotationX = (i - localMapSize/2) * cos(yawAngle) - (j - localMapSize/2) * sin(yawAngle);
           int rotationY = (i - localMapSize/2) * sin(yawAngle) + (j - localMapSize/2) * cos(yawAngle);
 
-          int x = globalMapSize / 2 + currentPosition.x/mapResolution + (rotationX);
-          int y = globalMapSize / 2 + currentPosition.y/mapResolution + (rotationY);
+          int x = map_width / 2 + currentPosition.x/mapResolution + (rotationX);
+          int y = map_height / 2 + currentPosition.y/mapResolution + (rotationY);
 
-          int value = globalMap[globalMapSize * y + x] * k
+          int value = globalMap[map_width * y + x] * k
               + localMap[localMapSize * j + i] * (1 - k);
 
           if(localMap[localMapSize * j + i] == 50){
@@ -120,7 +122,7 @@ void connectLocalAndGlobalMaps(){
           //        if(localMap[localMapSize * j + i] == 100 || globalMap[globalMapSize * y + x] == 100) {
           //          value = 100;
           //        }
-          globalMap[globalMapSize * y + x] = value;
+          globalMap[map_width * y + x] = value;
         }
       }
     }
@@ -128,22 +130,22 @@ void connectLocalAndGlobalMaps(){
 }
 void globalMapMessageInitParams(){
 
-  globalMapMessage.info.height = globalMapSize;
-  globalMapMessage.info.width = globalMapSize;
+  globalMapMessage.info.height = map_height;
+  globalMapMessage.info.width = map_width;
   globalMapMessage.info.resolution = mapResolution;
-  globalMapMessage.info.origin.position.x = -globalMapSize * mapResolution/2;
-  globalMapMessage.info.origin.position.y = -globalMapSize * mapResolution/2;
+  globalMapMessage.info.origin.position.x = -map_width * mapResolution/2;
+  globalMapMessage.info.origin.position.y = -map_height * mapResolution/2;
   globalMapMessage.header.frame_id = "/odom";
   globalMapMessage.header.stamp = ros::Time::now();
   globalMapMessage.data.resize(globalMapMessage.info.height * globalMapMessage.info.width);
 
-  for(int i = 0; i < globalMapSize * globalMapSize; i++){
+  for(int i = 0; i < globalMapMessage.info.height * globalMapMessage.info.width; i++){
     globalMap.push_back(50);
   }
 }
 
 void formGlobalMapMessage(){
-  for(int i = 0; i < globalMapSize*globalMapSize; i++){
+  for(int i = 0; i < globalMapMessage.info.height * globalMapMessage.info.width; i++){
     globalMapMessage.data[i] = globalMap[i];
   }
 }

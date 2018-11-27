@@ -1,156 +1,66 @@
 #include "rrt.h"
 #include <ros/ros.h>
-#include <nav_msgs/Path.h>
-#include <geometry_msgs/Pose2D.h>
 #include <tf/transform_listener.h>
 #include <nav_msgs/Odometry.h>
-#include <nav_msgs/OccupancyGrid.h>
 
 void odometryCallback(const nav_msgs::Odometry data);
 void globalMapCallback(const nav_msgs::OccupancyGrid& data);
-void mapMetaDataCallback(const nav_msgs::MapMetaData& data);
-void formPathMessage();
-
-// Инициализация параметров карты и пути
-void pathMessageInitParams();
 
 // Сообщение с путем
-nav_msgs::Path pathMessage;
-vector<geometry_msgs::Point> path;
+nav_msgs::Path current_path;
+nav_msgs::Path previous_path;
 
-const float ROBOT_WIDTH_HALF = 0.6/2;
+float ROBOT_HEIGHT = 0.7;
+float ROBOT_WIDTH = 0.5;
 const float CURVATURE = 0.2;
-
-// Размер карты
-float mapResolution = 0;
-int mapSize = 0;
-int mapHeight = 10;
-int mapWidth = 10;
 
 //Текущее положение платформы
 geometry_msgs::Pose2D currentPosition;
-
 nav_msgs::OccupancyGrid globalMap;
+
 bool isCameGlobalMap = false;
 bool isCameOdom = false;
-
-geometry_msgs::Point pointToSend;
-nav_msgs::Path target_path;
 
 int main(int argc, char **argv){
   ros::init(argc, argv, "kuka_path_searcher_node");
 
   // Создание публикатора пути
   ros::NodeHandle l;
-  ros::Publisher path_pub = l.advertise<nav_msgs::Path>("/path_rrt", 8);
-  ros::Publisher target_path_pub = l.advertise<nav_msgs::Path>("/target_path", 8);
-  ros::Subscriber map_metadata_sub = l.subscribe("/map_metadata", 8, mapMetaDataCallback);
-  ros::Publisher target_point_pab = l.advertise<geometry_msgs::Point> ("/target_point", 8);
+  ros::Publisher path_for_rviz_pub = l.advertise<nav_msgs::Path>("/path_rrt", 8);
+  ros::Publisher path_for_control_pub = l.advertise<nav_msgs::Path>("/target_path", 8);
   ros::Subscriber global_map_sub = l.subscribe("/global_map", 8, globalMapCallback);
   ros::Subscriber odom_sub = l.subscribe("/odom", 8, odometryCallback);
 
-  pathMessageInitParams();
-
   geometry_msgs::Pose2D goal;
-  //      goal.x = 0.3;
-  //      goal.y = 0;
-  //      goal.z = -1.5;
-
-  goal.x = 5;
-  goal.y = 3;
+  goal.x = 8;
+  goal.y = 4;
   goal.theta = -1.5;
-
-  //    goal.x = 4;
-  //    goal.y = 0.5;
-  //    goal.z = 0;
-
 
   ros::Rate rate(100);
   bool isAllowProcess = true;
-  ros::Time start_time = ros::Time::now();
   while(ros::ok() && isAllowProcess){
 
-    if(ros::Time::now().toSec() - start_time.toSec() < 1)
-      continue;
+    if(isCameOdom && isCameGlobalMap){
+      isCameOdom = false;
+      isCameGlobalMap = false;
 
-    if(!path.size()){
-      if(isCameOdom && isCameGlobalMap){
-        isCameOdom = false;
-        isCameGlobalMap = false;
+      previous_path = current_path;
+      // Запуск планировщика
+      RRT* rrt = new RRT();
+      current_path = rrt->Planning(currentPosition, goal, globalMap, CURVATURE, ROBOT_HEIGHT, ROBOT_WIDTH);
+      delete rrt;
 
-        // Запуск планировщика
-        RRT* rrt = new RRT();
-        path = rrt->Planning(currentPosition, goal, globalMap, CURVATURE, ROBOT_WIDTH_HALF);
-        delete rrt;
-
-        //        if(path.size() > 110){
-        //          path.clear();
-        //          continue;
-        //        }
-        if(path.size()){
-          cout << "Path is found " << path.size() << endl;
-          geometry_msgs::PoseStamped point;
-          for (int k = path.size() - 1; k >= 0; k--){
-            float nx = path[k].x;
-            float ny = path[k].y;
-            point.pose.position.x = nx - mapSize/2*mapResolution;
-            point.pose.position.y = ny - mapSize/2*mapResolution;
-            point.pose.position.z = path[k].z;
-            target_path.poses.push_back(point);
-          }
-          target_path_pub.publish(target_path);
-          formPathMessage();
+      if(current_path.poses.size()){
+        if(current_path.poses.size() < previous_path.poses.size() - 10|| !previous_path.poses.size()){
+          cout << "Path is " << current_path.poses.size() << endl;
+          path_for_control_pub.publish(current_path);
         }
         else{
           cout << "Path is not found" << endl;
-          target_path_pub.publish(target_path);
-          formPathMessage();
         }
       }
     }
-    else{
-      vector<geometry_msgs::Point> path_for_check;
-      RRT* rrt_check = new RRT();
-      path_for_check = rrt_check->Planning(currentPosition, goal, globalMap, CURVATURE, ROBOT_WIDTH_HALF);
-      delete rrt_check;
-
-      if(path_for_check.size() && (path_for_check.size() + 20 < path.size())){
-        cout << "Find shorter path, size "  << path_for_check.size() << endl;
-
-        pathMessage.poses.clear();
-        path.clear();
-        target_path.poses.clear();
-
-        path = path_for_check;
-        geometry_msgs::PoseStamped point;
-        for (int k = path.size() - 1; k >= 0; k--){
-          float nx = path[k].x;
-          float ny = path[k].y;
-          point.pose.position.x = nx - mapSize/2*mapResolution;
-          point.pose.position.y = ny - mapSize/2*mapResolution;
-          point.pose.position.z = path[k].z;
-          target_path.poses.push_back(point);
-        }
-        target_path_pub.publish(target_path);
-
-        formPathMessage();
-      }
-      else{
-        // Проверка на пересечение с новой картой
-        for (int k = path.size() - 1; k >= 0; k--){
-          int nx = path[k].x/mapResolution;
-          int ny = path[k].y/mapResolution;
-          if(globalMap.data[mapSize * ny + nx] > 75){
-            pathMessage.poses.clear();
-            path.clear();
-            target_path.poses.clear();
-            cout << "OBSTACLE! Search new path" << endl;
-          }
-        }
-      }
-      path_for_check.clear();
-    }
-    path_pub.publish(pathMessage);
+    path_for_rviz_pub.publish(current_path);
     ros::spinOnce();
     rate.sleep();
   }
@@ -160,42 +70,20 @@ void odometryCallback(const nav_msgs::Odometry data){
   // Получение угла поворота
   tf::Pose pose;
   tf::poseMsgToTF(data.pose.pose, pose);
+  float yawAngle = tf::getYaw(pose.getRotation());
 
-  // Окончательные начальные координаты
+  // Начальные координаты
   currentPosition.x = data.pose.pose.position.x;
   currentPosition.y = data.pose.pose.position.y;
-  currentPosition.theta = tf::getYaw(pose.getRotation());;
+  currentPosition.theta = yawAngle;
   isCameOdom = true;
 }
 
 void globalMapCallback(const nav_msgs::OccupancyGrid& data){
-  mapResolution = data.info.resolution;
-  mapSize = data.info.height;
+  globalMap.info.resolution = data.info.resolution;
+  globalMap.info.height = data.info.height;
+  globalMap.info.width = data.info.width;
+
   globalMap = data;
   isCameGlobalMap = true;
-}
-
-void mapMetaDataCallback(const nav_msgs::MapMetaData& data){
-  mapResolution = data.resolution;
-  mapHeight = data.height;
-  mapWidth = data.width;
-}
-
-
-void formPathMessage(){
-  // Точка для загрузки в сообщение пути
-  geometry_msgs::PoseStamped point;
-  for (int k = path.size() - 1; k >= 0; k--){
-    float nx = path[k].x;
-    float ny = path[k].y;
-
-    point.pose.position.x = nx - mapSize/2*mapResolution;
-    point.pose.position.y = ny - mapSize/2*mapResolution;
-    pathMessage.poses.push_back(point);
-  }
-}
-
-void pathMessageInitParams(){
-  pathMessage.header.frame_id = "/odom";
-  pathMessage.header.stamp = ros::Time::now();
 }

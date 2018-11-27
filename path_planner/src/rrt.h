@@ -4,6 +4,7 @@
 #include <geometry_msgs/Point.h>
 #include <geometry_msgs/Pose2D.h>
 #include <nav_msgs/OccupancyGrid.h>
+#include <nav_msgs/Path.h>
 
 #include <math.h>
 #include <vector>
@@ -22,9 +23,11 @@ private:
 
   // Все для карты
   nav_msgs::OccupancyGrid globalMap;
-  float mapSize;
+  float map_height;
+  float map_width;
   float mapResolution;
-  // Начало карты(0) и конец карты = mapSize/mapResolution
+
+  // Начало карты(0) и конец карты = map_height/mapResolution
   int minRand;
   int maxRand;
 
@@ -36,13 +39,15 @@ private:
   // Количество итераций
   int maxIter;
 
-  float ROBOT_WIDTH = 0.5;
-  float ROBOT_HEIGHT = 0.7;
+  // Габариты робота
+  float ROBOT_WIDTH;
+  float ROBOT_HEIGHT;
+  // Радиус поворота
+  float CURVATURE;
 
   // Лист с открытыми узлами и путями к ним
   vector<Node*> nodeList;
-  // Радиус поворота робота
-  float curvature;
+
 
   // Сгенерировать рандомный узел
   Node* getRandomPoint();
@@ -60,7 +65,7 @@ private:
   vector<int> find_near_nodes(Node* newNode);
 
   // Сфлормировать окончательный курс
-  vector<geometry_msgs::Point> gen_final_course(int goalInd);
+  nav_msgs::Path gen_final_course(int goalInd);
   // Получить лучший индекс
   float get_best_last_index();
 
@@ -73,11 +78,12 @@ private:
 
 public:
   RRT();
+  ~RRT();
 
   // Начать планирование
-  vector<geometry_msgs::Point> Planning(geometry_msgs::Pose2D s, geometry_msgs::Pose2D g,
+  nav_msgs::Path Planning(geometry_msgs::Pose2D s, geometry_msgs::Pose2D g,
                                         const nav_msgs::OccupancyGrid& gMap, float curv,
-                                        float robot_width_half,int maxIter0 = 100);
+                                        float robot_height, float robot_width ,int maxIter0 = 100);
 };
 
 #endif // RRT_H
