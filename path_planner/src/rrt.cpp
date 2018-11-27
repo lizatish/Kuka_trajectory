@@ -249,8 +249,8 @@ vector<int> RRT::find_near_nodes(Node* newNode){
 void RRT::rewire(vector<int> nearInds){
 
   int nnode = nodeList.size();
-  Node nearNode = new Node();
-  Node tNode = new Node();
+  Node* nearNode = new Node();
+  Node* tNode = new Node();
 
   bool obstacleOK = false;
   bool imporveCost = false;
