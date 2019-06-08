@@ -2,6 +2,8 @@
 #include <ros/ros.h>
 #include <tf/transform_listener.h>
 #include <nav_msgs/Odometry.h>
+//#include <gmapping/grid/map.h>
+
 
 void odometryCallback(const nav_msgs::Odometry data);
 void globalMapCallback(const nav_msgs::OccupancyGrid& data);
@@ -28,21 +30,23 @@ int main(int argc, char **argv){
   ros::NodeHandle l;
   ros::Publisher path_for_rviz_pub = l.advertise<nav_msgs::Path>("/path_rrt", 8);
   ros::Publisher path_for_control_pub = l.advertise<nav_msgs::Path>("/target_path", 8);
-  ros::Subscriber global_map_sub = l.subscribe("/global_map", 8, globalMapCallback);
+  ros::Subscriber global_map_sub = l.subscribe("/map", 8, globalMapCallback);
   ros::Subscriber odom_sub = l.subscribe("/odom", 8, odometryCallback);
+  ros::Publisher global_map_pub = l.advertise<nav_msgs::OccupancyGrid>("/g_map", 8);
+
 
   geometry_msgs::Pose2D goal;
-  goal.x = 8;
-  goal.y = 4;
-  goal.theta = -1.5;
+  goal.x = 3;
+  goal.y = 1;
+  goal.theta = 1.5;
 
   ros::Rate rate(100);
   bool isAllowProcess = true;
   while(ros::ok() && isAllowProcess){
 
     if(isCameOdom && isCameGlobalMap){
-      isCameOdom = false;
-      isCameGlobalMap = false;
+      //      isCameOdom = false;
+      //      isCameGlobalMap = false;
 
       previous_path = current_path;
       // Запуск планировщика
@@ -61,6 +65,8 @@ int main(int argc, char **argv){
       }
     }
     path_for_rviz_pub.publish(current_path);
+    global_map_pub.publish(globalMap);
+
     ros::spinOnce();
     rate.sleep();
   }
@@ -83,7 +89,26 @@ void globalMapCallback(const nav_msgs::OccupancyGrid& data){
   globalMap.info.resolution = data.info.resolution;
   globalMap.info.height = data.info.height;
   globalMap.info.width = data.info.width;
+  globalMap.info.origin = data.info.origin;
 
-  globalMap = data;
+  globalMap.data = data.data;
+
+  for(int i = 0; i < globalMap.info.width; i++)
+    for(int j = 0; j < globalMap.info.height; j++){
+      //      GMapping::IntPoint p(i, globalMap.info.width * j);
+      //      double occ=smap.cell(p);
+      if((int)globalMap.data[globalMap.info.width * j + i] == -1) {
+        globalMap.data[globalMap.info.width * j + i] = 50;
+        //      cout << (int)globalMap.data[globalMap.info.width * j + i] << endl;
+      }
+      if((int)globalMap.data[globalMap.info.width * j + i] > 75) {
+        globalMap.data[globalMap.info.width * j + i] = 100;
+        //      cout << (int)globalMap.data[globalMap.info.width * j + i] << endl;
+      }
+      if((int)globalMap.data[globalMap.info.width * j + i] < 20) {
+        globalMap.data[globalMap.info.width * j + i] = 0;
+        //      cout << (int)globalMap.data[globalMap.info.width * j + i] << endl;
+      }
+    }
   isCameGlobalMap = true;
 }

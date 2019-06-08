@@ -213,6 +213,7 @@ nav_msgs::Path RRT::gen_final_course(int goalInd){
       p.pose.position.y = (node->path_y[i] - map_height/2*mapResolution);
       p.pose.orientation.z = node->path_yaw[i];
       path.poses.push_back(p);
+
     }
     goalInd = node->parent;
   }
@@ -295,8 +296,8 @@ bool RRT::collisionCheck(Node* node){
 
   for(int k = 0; k < node->path_x.size(); k++){
 
-    int x_robot_center = int(node->path_x[k]/mapResolution);
-    int y_robot_center = int(node->path_y[k]/mapResolution);
+    int x_robot_center = int(node->path_x[k]/mapResolution - globalMap.info.origin.position.x / globalMap.info.resolution);
+    int y_robot_center = int(node->path_y[k]/mapResolution  - globalMap.info.origin.position.y / globalMap.info.resolution);
     float robot_yaw = node->path_yaw[k];
 
     float sin_yaw = sin(robot_yaw);
@@ -311,7 +312,8 @@ bool RRT::collisionCheck(Node* node){
           int x_robot_size = x_robot_center + i * cos_yaw + j * sin_yaw;
           int y_robot_size = y_robot_center - i * sin_yaw + j * cos_yaw;
 
-          if(globalMap.data[map_width * y_robot_size + x_robot_size] >= 70){
+          if(int(globalMap.data[map_width * y_robot_size + x_robot_size]) > 75){
+//            cout << (int)globalMap.data[map_width * y_robot_size + x_robot_size] << endl;
             return false;
           }
         }
